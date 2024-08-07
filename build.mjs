@@ -2,6 +2,12 @@ import nwbuild from "nw-builder";
 import fs from "fs";
 import webpack from "webpack";
 import webpackConfig from "./webpack.config.js";
+import { spawn, exec } from "child_process";
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 (async function () {
     //clear old dist
@@ -23,13 +29,57 @@ import webpackConfig from "./webpack.config.js";
     var packageJSON = {
         name: appPackage.name,
         version: appPackage.version,
-        description:appPackage.description,
+        description: appPackage.description,
         author: appPackage.author,
         license: appPackage.license,
         main: "index.html",
-        "chromium-args": appPackage["chromium-args"]
+        "chromium-args": appPackage["chromium-args"],
+        "js-flags": appPackage["js-flags"],
+        dependencies: appPackage.dependencies
     };
     fs.writeFileSync('dist/package.json', JSON.stringify(packageJSON, null, 4));
+
+    await npmInstall();
+
+    function npmInstall(prod) {
+
+        return new Promise((resolve, reject) => {
+            // const args = ["install"];
+            // if (prod) args.push("--omit=dev")
+            const npm = exec("npm install --omit=dev", {
+                cwd: path.resolve(__dirname, "./dist/")
+            }, function (err, stdout, stderr) {
+                resolve()
+            });
+                npm.on("close", code => {
+                    console.log(`child process exited with code ${code}`);
+                    resolve(code)
+                });
+
+        });
+        // return new Promise((resolve, reject) => {
+        //     const args = ["install"];
+        //     if (prod) args.push("--omit=dev")
+        //     const npm = spawn("npm", args, {
+        //         cwd: path.resolve(__dirname, "./dist/")
+        //     });
+        //     npm.stdout.on("data", data => {
+        //         console.log(` ${data}`);
+        //     });
+        //     npm.stderr.on("data", data => {
+        //         console.log(` ${data}`);
+        //     });
+        //     npm.on('error', (error) => {
+        //         console.log(`error: ${error.message}`);
+        //         reject(error)
+        //     });
+        //     npm.on("close", code => {
+        //         console.log(`child process exited with code ${code}`);
+        //         resolve(code)
+        //     });
+        // });
+    }
+
 
     //build package
     var b = await nwbuild({
@@ -38,9 +88,24 @@ import webpackConfig from "./webpack.config.js";
         outDir: "./build",
         version: "latest",
         glob: false,
-        cacheDir: process.env.LOCALAPPDATA + "./Temp/nwbuild-cache"
+        cacheDir: __dirname + "/nwbuild-cache"
     });
-    fs.rmSync("./dist", { recursive: true, force: true })
+
+
+    async function createNpmDependenciesArray(p) {
+        // var p = await import(packageFilePath);
+        // var p = require(packageFilePath);
+        if (!p.dependencies) return [];
+
+        var deps = [];
+        for (var mod in p.dependencies) {
+            deps.push(mod + "@" + p.dependencies[mod]);
+        }
+
+        return deps;
+    }
+
+    // fs.rmSync("./dist", { recursive: true, force: true })
     //move new build to new dist
-    fs.renameSync("./build", "./dist");
+    // fs.renameSync("./build", "./dist");
 })();

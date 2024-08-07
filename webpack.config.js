@@ -1,7 +1,18 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
-const isProduction = !(process.env.NODE_ENV == 'development');
+const isProduction = (process.env.NODE_ENV == 'production');
+
+// const CopyPlugin = require('copy-webpack-plugin')
+// module.exports = {
+//   plugins: [
+//     new CopyPlugin([{
+//       from: 'node_modules/scrypt/build/Release/scrypt.node',
+//       to: 'build/Release'
+//     }])
+//   ],
+//   externals: './build/Release/scrypt'
+// }
 
 const config = {
     mode: (isProduction ? "production" : "development"),
